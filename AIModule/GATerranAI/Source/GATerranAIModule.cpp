@@ -7,11 +7,6 @@
 using namespace BWAPI;
 using namespace Filter;
 
-int racksCount;
-int SCVs;
-int marineRollout;
-BWAPI::Unitset marines;
-Position enemy;
 Production producer;
 PlayerState state;
 
@@ -24,10 +19,7 @@ void GATerranAIModule::onStart()
   Broodwar->sendText("Hello world!");
 
   state = PlayerState();
-  racksCount = 0;
-  SCVs = 0;
-  marineRollout = 20;
-  producer = Production(9, 13, 4);
+  producer = Production();
 
   // Print the map name.
   // BWAPI returns std::string when retrieving a string, don't forget to add .c_str() when printing!
@@ -38,8 +30,6 @@ void GATerranAIModule::onStart()
 
   // Uncomment the following line and the bot will know about everything through the fog of war (cheat).
   Broodwar->enableFlag(Flag::CompleteMapInformation);
-
-  enemy = Position(1000, 50);
 
   // Set the command optimization level so that common commands can be grouped
   // and reduce the bot's APM (Actions Per Minute).
@@ -237,10 +227,9 @@ void GATerranAIModule::onUnitCreate(BWAPI::Unit unit)
       Broodwar->sendText("%.2d:%.2d: %s creates a %s", minutes, seconds, unit->getPlayer()->getName().c_str(), unit->getType().c_str());
     }
   }
-  if (unit && Broodwar->getFrameCount() < 5000)
-	  state.updateUnit(unit);
-  else
-	  Broodwar->sendText("done!");
+
+	state.updateUnit(unit);
+ 
 }
 
 void GATerranAIModule::onUnitDestroy(BWAPI::Unit unit)

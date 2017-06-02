@@ -1,6 +1,7 @@
 #include "Production.h"
 #include "TrainEvent.h"
 #include "BuildEvent.h"
+#include "PushEvent.h"
 #include <queue>
 #include <vector>
 #include <fstream>
@@ -12,7 +13,8 @@ enum Build {
 	SCV,
 	MRN,
 	SPLY,
-	RAX
+	RAX,
+	PSH
 };
 
 std::queue<MacroEvent *> taskToDo; // start an event
@@ -22,16 +24,7 @@ std::queue<MacroEvent *> taskToKeep; // keep events that are unresolved
 std::vector<Build> buildOrder;
 int buildOrderPos;
 
-int SCVForFirstSPLY;
-int SCVForRAX;
-int maxRax;
-
-Production::Production() {}
-
-Production::Production(int firstSPLY, int rax, int mxRax) {
-	SCVForFirstSPLY = firstSPLY;
-	SCVForRAX = rax;
-	maxRax = mxRax;
+Production::Production() {
 	taskToDo = std::queue<MacroEvent *>();
 	taskToRes = std::queue<MacroEvent *>();
 	taskToKeep = std::queue<MacroEvent *>();
@@ -100,6 +93,9 @@ void Production::predetermineTasks(PlayerState *state) {
 			state->reserveMin(UnitTypes::Terran_Barracks.mineralPrice());
 			buildOrderPos++;
 		}
+		break;
+	case PSH:
+		taskToDo.push(new PushEvent(UnitTypes::Terran_Marine));
 		break;
 	default:
 		break;

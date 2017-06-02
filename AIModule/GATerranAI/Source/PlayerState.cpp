@@ -25,6 +25,8 @@ void PlayerState::update()
 	maxSupply = Broodwar->self()->supplyTotal();
 	supply = Broodwar->self()->supplyUsed();
 	
+	if (nexus && nexus->getClosestUnit(Filter::IsEnemy))
+		enemyLoc = nexus->getClosestUnit(Filter::IsEnemy)->getPosition();
 }
 
 void PlayerState::updateUnit(BWAPI::Unit u)
@@ -44,7 +46,7 @@ void PlayerState::removeUnit(BWAPI::Unit u)
 {
 	if (u) {
 		units[u->getType()].erase(u);
-		if (u->getID() == nexus->getID()) {
+		if (nexus && u->getID() == nexus->getID()) {
 			nexus = NULL;
 		}
 	}

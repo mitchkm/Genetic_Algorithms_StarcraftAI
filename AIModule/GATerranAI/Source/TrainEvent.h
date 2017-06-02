@@ -1,6 +1,5 @@
 #pragma once
 #include "MacroEvent.h"
-#include "BWAPI.h"
 
 class TrainEvent :
 	public MacroEvent

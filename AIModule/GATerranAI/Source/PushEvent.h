@@ -1,20 +1,17 @@
 #pragma once
 #include "MacroEvent.h"
 
-class BuildEvent :
+class PushEvent :
 	public MacroEvent
 {
 private:
-	BWAPI::Unit unit;
 	BWAPI::UnitType type;
 public:
-	BuildEvent(BWAPI::Unit u, BWAPI::UnitType type)
-		: unit(u)
-		, type(type) {};
-	~BuildEvent();
+	PushEvent(BWAPI::UnitType t)
+		: type(t) {};
+	~PushEvent();
 	bool enact();
 	bool resolved();
 	bool resolve(PlayerState *state);
-	
 };
 
