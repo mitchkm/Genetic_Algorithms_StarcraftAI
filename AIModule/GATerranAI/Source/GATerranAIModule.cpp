@@ -3,6 +3,7 @@
 #include <fstream>
 #include "Production.h"
 #include "PlayerState.h"
+#include "GASocket.h"
 
 using namespace BWAPI;
 using namespace Filter;
@@ -16,6 +17,7 @@ void GATerranAIModule::onStart()
 	//Broodwar->setGUI(false);
 
   // Hello World!
+	GASocket gaSocket = GASocket();
   Broodwar->sendText("Hello world!");
 
   state = PlayerState();

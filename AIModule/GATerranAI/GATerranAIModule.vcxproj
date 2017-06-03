@@ -96,6 +96,7 @@
   <ItemGroup>
     <ClCompile Include="Source\BuildEvent.cpp" />
     <ClCompile Include="Source\Dll.cpp" />
+    <ClCompile Include="Source\GASocket.cpp" />
     <ClCompile Include="Source\MacroEvent.cpp" />
     <ClCompile Include="Source\GATerranAIModule.cpp" />
     <ClCompile Include="Source\PlayerState.cpp" />
@@ -105,6 +106,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Source\BuildEvent.h" />
+    <ClInclude Include="Source\GASocket.h" />
     <ClInclude Include="Source\MacroEvent.h" />
     <ClInclude Include="Source\GATerranAIModule.h" />
     <ClInclude Include="Source\PlayerState.h" />
