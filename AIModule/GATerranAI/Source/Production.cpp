@@ -46,6 +46,26 @@ Production::Production() {
 	buildOrderPos = 0;
 }
 
+Production::Production(char *bo) {
+	taskToDo = std::queue<MacroEvent *>();
+	taskToRes = std::queue<MacroEvent *>();
+	taskToKeep = std::queue<MacroEvent *>();
+
+	// Read Build Order from Socket
+	char *boTok = strtok(bo, ",");
+	
+		if (boTok) {
+			buildOrder.resize(atoi(boTok));
+			buildOrder.clear();
+			boTok = strtok(NULL, ",");
+		}		
+		while (boTok) {	
+			buildOrder.push_back(static_cast<Build>(atoi(boTok)));
+			boTok = strtok(NULL, ",");
+		}
+	buildOrderPos = 0;
+}
+
 void Production::showTask() {
 	
 

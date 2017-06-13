@@ -10,22 +10,26 @@ using namespace Filter;
 
 Production producer;
 PlayerState state;
+bool GASOCKET = true;
+GASocket *gaSocket = NULL;
 
 void GATerranAIModule::onStart()
 {
 	Broodwar->setLocalSpeed(0);
 	//Broodwar->setGUI(false);
 
-  // Hello World!
-	GASocket gaSocket = GASocket();
-  Broodwar->sendText("Hello world!");
-
+	if (GASOCKET) {// use GA Socket
+		gaSocket = new GASocket();
+		producer = Production(gaSocket->getBO());
+	}
+	else {
+		producer = Production();
+	}
   state = PlayerState();
-  producer = Production();
 
-  // Print the map name.
-  // BWAPI returns std::string when retrieving a string, don't forget to add .c_str() when printing!
-  Broodwar << "The map is " << Broodwar->mapName() << "!" << std::endl;
+  if (GASOCKET)
+	Broodwar->sendText("Testing Build Order: %s", gaSocket->getID());
+  
 
   // Enable the UserInput flag, which allows us to control the bot and type messages.
   Broodwar->enableFlag(Flag::UserInput);
@@ -37,40 +41,25 @@ void GATerranAIModule::onStart()
   // and reduce the bot's APM (Actions Per Minute).
   Broodwar->setCommandOptimizationLevel(2);
 
-  // Check if this is a replay
-  if ( Broodwar->isReplay() )
-  {
-
-    // Announce the players in the replay
-    Broodwar << "The following players are in this replay:" << std::endl;
-    
-    // Iterate all the players in the game using a std:: iterator
-    Playerset players = Broodwar->getPlayers();
-    for(auto p : players)
-    {
-      // Only print the player if they are not an observer
-      if ( !p->isObserver() )
-        Broodwar << p->getName() << ", playing as " << p->getRace() << std::endl;
-    }
-
-  }
-  else // if this is not a replay
-  {
-    // Retrieve you and your enemy's races. enemy() will just return the first enemy.
-    // If you wish to deal with multiple enemies then you must use enemies().
-    if ( Broodwar->enemy() ) // First make sure there is an enemy
-      Broodwar << "The matchup is " << Broodwar->self()->getRace() << " vs " << Broodwar->enemy()->getRace() << std::endl;
-  }
-
 }
 
 void GATerranAIModule::onEnd(bool isWinner)
 {
-  // Called when the game ends
-  if ( isWinner )
-  {
-    // Log your win here!
+  if (GASOCKET) {
+	  gaSocket->sendResults(isWinner,
+		  Broodwar->self()->gatheredMinerals(),
+		  Broodwar->self()->gatheredGas(),
+		  Broodwar->self()->getCustomScore(),
+		  Broodwar->self()->getUnitScore(),
+		  Broodwar->self()->getKillScore(),
+		  Broodwar->self()->getBuildingScore(),
+		  Broodwar->self()->getRazingScore(),
+		  Broodwar->elapsedTime());
+	  gaSocket->waitForRestart();
   }
+
+  Sleep(5000);
+  Broodwar->restartGame();
 }
 
 void GATerranAIModule::unitControl(BWAPI::Unit u) {	

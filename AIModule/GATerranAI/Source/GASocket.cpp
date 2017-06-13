@@ -4,14 +4,11 @@ Author: Pindrought
 Date: 11/13/2015
 This is the solution for the client that you should have at the end of tutorial 1.
 */
-#pragma comment(lib,"ws2_32.lib")
-#include <WinSock2.h>
-#include <iostream>
+
 #include <string>
-#include <sstream>
 
 
-int connect()
+int GASocket::connectToGA()
 {
 	//Winsock Startup
 	WSAData wsaData;
@@ -28,30 +25,58 @@ int connect()
 	addr.sin_port = htons(1771); //Port = 1111
 	addr.sin_family = AF_INET; //IPv4 Socket
 
-	SOCKET Connection = socket(AF_INET, SOCK_STREAM, NULL); //Set Connection socket
-	if (connect(Connection, (SOCKADDR*)&addr, sizeofaddr) != 0) //If we are unable to connect...
+	connection = socket(AF_INET, SOCK_STREAM, NULL); //Set Connection socket
+	if (connect(connection, (SOCKADDR*)&addr, sizeofaddr) != 0) //If we are unable to connect...
 	{
 		MessageBoxA(NULL, "Failed to Connect", "Error", MB_OK | MB_ICONERROR);
 		return 0; //Failed to Connect
 	}
-
-	char MOTD[256];
-	recv(Connection, MOTD, sizeof(MOTD), NULL); //Receive Message of the Day buffer into MOTD array
-	std::stringstream stream(MOTD);
-	int n;
-	stream >> n;
-	BWAPI::Broodwar->sendText("%d <-", n);
+	recv(connection, BO, sizeof(BO), NULL); // Revieve string versiong of build order
+	char* rcvd = "Recieved\n";
+	send(connection, rcvd, strlen(rcvd) + 1, 0);
+	recv(connection, ID, sizeof(ID), NULL);
 }
 
 
 GASocket::GASocket()
 {
-	connect();
+	connectToGA();
 
 }
 
-
-
 GASocket::~GASocket()
 {
+	closesocket(connection);
+}
+
+char *GASocket::getBO() {
+
+	return BO;
+}
+
+char *GASocket::getID() {
+	return ID;
+}
+
+void GASocket::sendResults(bool winner, int totalMin, int totalGas, int customScore, int unitScore, int killScore, int buildingScore, int razingScore, int elapsedTime)
+{
+	// This string is created in a particular order matching the one expected by the R script:
+	// Win, , Total_Minerals, Total_Gas, Custom_score, Unit_Score, Kill_Score, Building_Score, Razing_Score, Elapsed_Time
+	std::string res("");
+	res += std::to_string(winner);
+	res += ", " + std::to_string(totalMin);
+	res += ", " + std::to_string(totalGas);
+	res += ", " + std::to_string(customScore);
+	res += ", " + std::to_string(unitScore);
+	res += ", " + std::to_string(killScore);
+	res += ", " + std::to_string(buildingScore);
+	res += ", " + std::to_string(razingScore);
+	res += ", " + std::to_string(elapsedTime);
+	res += '\n';
+	send(connection, res.c_str(), res.length() + 1, 0);
+}
+
+void GASocket::waitForRestart() {	
+	char temp[100];
+	recv(connection, temp, sizeof(temp), NULL);
 }
