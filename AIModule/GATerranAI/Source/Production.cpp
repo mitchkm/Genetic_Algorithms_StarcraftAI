@@ -68,7 +68,7 @@ Production::Production(char *bo) {
 
 void Production::showTask() {
 	
-
+	Broodwar->drawTextScreen(200, 35, "BO_pos: %d", buildOrderPos);
 
 }
 
@@ -85,6 +85,7 @@ void Production::predetermineTasks(PlayerState *state) {
 				state->reserveMin(UnitTypes::Terran_SCV.mineralPrice());
 				state->reserveSupply(UnitTypes::Terran_SCV.supplyRequired());
 				buildOrderPos++;
+				break;
 			}
 		}
 		break;
@@ -116,6 +117,7 @@ void Production::predetermineTasks(PlayerState *state) {
 		break;
 	case PSH:
 		taskToDo.push(new PushEvent(UnitTypes::Terran_Marine));
+		buildOrderPos++;
 		break;
 	default:
 		break;

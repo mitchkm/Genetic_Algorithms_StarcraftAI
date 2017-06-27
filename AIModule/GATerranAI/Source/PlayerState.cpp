@@ -55,7 +55,7 @@ void PlayerState::removeUnit(BWAPI::Unit u)
 
 int PlayerState::reserveGas(int gas)
 {
-	reservedGas += gas;
+	reservedGas = reservedGas + gas;
 	return reservedGas;
 }
 
@@ -67,7 +67,7 @@ int PlayerState::reserveMin(int min)
 
 int PlayerState::gasUsed(int gas)
 {
-	reservedGas -= gas;
+	reservedGas = reservedGas - gas;
 	return reservedGas;
 }
 
@@ -93,13 +93,13 @@ int PlayerState::getReserveMin() {
 
 int PlayerState::reserveSupply(int supply)
 {
-	reservedSupply += supply;
+	reservedSupply = reservedSupply + supply;
 	return reservedSupply;
 }
 
 int PlayerState::supplyUsed(int supply)
 {
-	reservedSupply -= supply;
+	reservedSupply = reservedSupply - supply;
 	return reservedSupply;
 }
 

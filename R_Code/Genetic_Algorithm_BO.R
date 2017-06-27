@@ -23,7 +23,30 @@ gaperm_Population_varied <- function(object, size=c(1, 1, 1), r=FALSE,...)
   population <- matrix(list(), nrow = object@popSize, ncol = 1)
   for(i in 1:object@popSize)
     population[[i]] <- sample(int, size[i], replace = r)
-  return(population)
+  object@population <- population
+  return(object)
+}
+
+# Altered GA package function to create two children by picking a different crossover point in each
+#  list of numbers and swapping them
+ga_spCrossover_varied <- function(object, parents, ...)
+{
+  # Single-point crossover
+  fitness <- object@fitness[parents]
+  parents <- object@population[parents,,drop = FALSE]
+  lens    <- lengths(parents[,1])
+  print(parents)
+  children <- matrix(list(), nrow = 2, ncol = 1)
+  fitnessChildren <- rep(NA, 2)
+  pnt <- c(sample(1:lens[1], size = 1), sample(1:lens[2], size = 1))
+  print(pnt)
+  children[1,1] <- list(c(parents[[1]][1:pnt[1]],
+                          parents[[2]][pnt[2]:lens[2]]))
+  children[2,1] <- list(c(parents[[2]][1:pnt[2]],
+                          parents[[1]][pnt[1]:lens[1]]))
+  
+  out <- list(children = children, fitness = fitnessChildren)
+  return(out)
 }
 
 
@@ -107,18 +130,31 @@ simGame <- function(ID, BO_Indv) {
 }
 
 ####### Config #######
-MAX_GEN <- 1
-POP_SIZE <- 100
-GAMES_PER_INDV <- 1
+MAX_GEN <- 50
+POP_SIZE <- 50
+GAMES_PER_INDV <- 5
+
 MAX_INSTR <- 4
-MIN_ORDERS <- 70
-MAX_ORDERS <- 400
+MIN_ORDERS <- 50
+MAX_ORDERS <- 350
 
 # Build GA-package ga class object
 ga <- new('ga')
 ga@min <- 0
 ga@max <- MAX_INSTR
 ga@popSize <- POP_SIZE
+
+# GA specific params
+SELECT <- ga_tourSelection
+TOUR_SIZE <- 5
+
+CROSS <- ga_spCrossover_varied
+
+fitFun <- function(data) {
+  fitness <- mean((data$Unit_Score + data$Building_Score + data$Kill_Score + data$Razing_Score) 
+                  / data$Elapsed_Time)
+  return(fitness)
+}
 
 # etc.
 
@@ -149,13 +185,14 @@ main <- function() {
                          Elapsed_Time=NA)
   
   # Generate first generation individuals
-  builds[1,] <<- gaperm_Population_varied(ga, size=sample(c(MIN_ORDERS:MAX_ORDERS), ga@popSize, replace=T), r=T)
+  ga <<- gaperm_Population_varied(ga, size=sample(c(MIN_ORDERS:MAX_ORDERS), ga@popSize, replace=T), r=T)
   
   # return(ga@popSize)
   
   # Full run of the Genetic Algorithm
   while(gen <= MAX_GEN) {
     indv <<- 1
+    builds[gen,] <<- ga@population
     while(indv <= POP_SIZE) {
       game <<- 1
       while(game <= GAMES_PER_INDV){
@@ -163,25 +200,63 @@ main <- function() {
         run_data[run_data.row, +indvInfo] <<- c(gen, indv, game, NA)
         
         run_data[run_data.row, -indvInfo] <<- simGame(ID=createID(gen, indv, game),
-                                                      BO_Indv=toBOString(builds[[gen,indv]]))
+                                                      BO_Indv=toBOString(ga@population[[indv]]))
         
         run_data.row <<- run_data.row + 1
         game <<- game + 1
       }
+      run_data[run_data$Gen==gen & run_data$Indv==indv,]$Fitness <<-
+        fitFun(run_data[run_data$Gen==gen & run_data$Indv==indv,])
+      
       indv <<- indv + 1
     }
+    # inject fitness into ga class object
+    ga@fitness <- run_data[run_data$Gen==gen & run_data$Game==1,]$Fitness
     
-    # TODO: calc. fitness, generate next generation
+    # select parents to use to create next generation
+    selection <- SELECT(ga, k = TOUR_SIZE)
+    report("====== Selected Parent Indv. for Gen ", gen, " ======")
+    print(sort(unique(match(selection$fitness, ga@fitness))))
+    
+    ga@population <- selection$population
+    
+    # crossover (Copied from the GA package's ga function and altered)
+    
+    Pop <- ga@population
+    nmating <- floor(ga@popSize/2)
+    mating <- matrix(sample(1:(2*nmating), size = (2*nmating)), ncol = 2)
+    for(i in seq_len(nmating))
+    { 
+      parents <- mating[i,]
+      repeat {
+        crossover <- CROSS(ga, parents)
+        childLens <- lengths(crossover$children[,1])
+        if (sum(childLens > MIN_ORDERS & childLens < MAX_ORDERS) == 2) {
+          break;
+        }
+      }
+      
+      Pop[parents,] <- crossover$children
+    }
+    ga@population <- Pop
+    
     
     gen <<- gen + 1
   }
 }
 
+writeData <- function(name, gen = 1) {
+  write.csv(run_data, file = paste("data/", name, ".csv", sep = ''))
+  for (x in 1:gen) {
+    write.csv(t(pad(builds[x,])), file = paste("data/", name, "_builds_gen_", x, ".csv", sep = ''))
+    write.csv(t(meaningfulBO(pad(builds[x,]))), file = paste("data/", name, "_mbuilds_gen_", x, ".csv", sep = ''))
+  }
+}
 
-
-test <- function() {
-  example_BO <- c(4,0,0,0,2)
-  
-  while(TRUE)
-    simGame(BO_Indv = toString(example_BO), ID = "Gen01_Indv02")
+test <- function(iter = 5) {
+  i <- 1
+  while(i < iter) {
+    simGame(BO_Indv = toBOString(builds[[58]]), ID = "!TEST!")
+    i <- i + 1
+    }
 }

@@ -1,0 +1,6 @@
+GATerranAI vs Protoss
+Population Size: 50
+Generations Simulated: 18
+Games per Individual: 5
+FitFun: mean((Unit_Score + Building_Score + Kill_Score + Razing_Score) 
+		/ Elapsed_Time)

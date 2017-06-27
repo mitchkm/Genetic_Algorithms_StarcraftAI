@@ -16,7 +16,7 @@ GASocket *gaSocket = NULL;
 void GATerranAIModule::onStart()
 {
 	Broodwar->setLocalSpeed(0);
-	//Broodwar->setGUI(false);
+	Broodwar->setGUI(false);
 
 	if (GASOCKET) {// use GA Socket
 		gaSocket = new GASocket();
@@ -58,7 +58,7 @@ void GATerranAIModule::onEnd(bool isWinner)
 	  gaSocket->waitForRestart();
   }
 
-  Sleep(5000);
+  Sleep(750);
   Broodwar->restartGame();
 }
 
@@ -98,7 +98,7 @@ void GATerranAIModule::onFrame()
   // Display the game frame rate as text in the upper left area of the screen
   Broodwar->drawTextScreen(200, 0,  "FPS: %d", Broodwar->getFPS() );
   Broodwar->drawTextScreen(200, 20, "Average FPS: %f", Broodwar->getAverageFPS());
-  Broodwar->drawTextScreen(200, 35, "Rax: %d", state.getUnits(UnitTypes::Terran_Barracks).size());
+  //Broodwar->drawTextScreen(200, 35, "Rax: %d", state.getUnits(UnitTypes::Terran_Barracks).size());
   Broodwar->drawTextScreen(200, 45, "RsrvedMin: %d", state.getReserveMin());
 
   // Return if the game is a replay or is paused
@@ -142,7 +142,7 @@ void GATerranAIModule::onFrame()
 	state.update();  
 	producer.predetermineTasks(&state);
 	producer.update(&state);
-  
+	producer.showTask();
 	  
 }
 
