@@ -6,3 +6,5 @@
 - genotype - structure
 - phenotype - parameter set, alternative solution, a decoded structure
 - epistasis - nonlinearity 
+ 
+ .
