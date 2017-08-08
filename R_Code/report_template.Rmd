@@ -1,7 +1,7 @@
 ---
-title: 'Case Study 00: This is a template'
-author: "Author 1 and Author 2"
-date: "March 00, 2015"
+title: 'Case Study 01: Using GA to find effective build orders for a custom Starcraft AI'
+author: "Mitchell Miller"
+date: "July 10, 2017"
 output:
   pdf_document:
     fig_caption: yes
@@ -23,72 +23,194 @@ if (!require(GGally, quietly = TRUE)){
       install.packages("GGally")
       }
 ```
-## Summary
-This document provides a template for the Case Study reports. Reports should always start a short executive summary (call it an _Abstract_ if you want) to give the reader a general idea of the topic under investigation, the kind of analysis performed, the results obtained, and the general recommendations of the authors.
 
-There are (at least) two ways to render this document to **pdf** in R: one easy and one... well, less easy.
+```{r loaddata, echo=F}
+# The first step is to load and preprocess the data.
 
-### 1. The easy way
-Use [RStudio](http://rstudio.com/) as your editor, open the **.Rmd** file and click the _Knit PDF_ button at the top of the editor.
+setwd("C:/Users/mitch/Documents/SCBW_AI/R_Code")
+load(file = "data/Rand_Run01/Rand_Run01.Rdata")
+builds.r <- builds
+data.r <- run_data
+load(file = "data/GA_Run01/GA_Run01.Rdata")
+data.a <- run_data
+builds.a <- builds
+load(file = "data/GA_Run02/GA_Run02.Rdata")
+builds.b <- builds
+data.b <- run_data
 
-### 2. The slightly-less-easy way
-If you're using any other R editor (such as the basic [R](http://cran.r-project.org) editor), you have to use the _render()_ function from the **rmarkdown** package:
+remove(builds)
+remove(run_data)
 
-```{r, eval=F}
-install.packages("devtools")                    # you only have to install it once
-library(devtools)
-install_github("rstudio/rmarkdown")             # you only have to install it once
-library(rmarkdown)
-render("report_template.Rmd","pdf_document")    # this renders the pdf
+aggdata.r <- aggregate(.~Gen:Indv, data = data.r, FUN = mean)
+aggdata.a <- aggregate(.~Gen:Indv, data = data.a, FUN = mean)
+aggdata.b <- aggregate(.~Gen:Indv, data = data.b, FUN = mean)
+
+combineData <- data.frame(Algorithm = c(rep(c('R', 'A', 'B'), times = c(900, 900, 900))), Fitness = c(aggdata.r$Fitness, aggdata.a$Fitness, aggdata.b$Fitness), Win = c(aggdata.r$Win, aggdata.a$Win, aggdata.b$Win), Kill_Score = c(aggdata.r$Kill_Score, aggdata.a$Kill_Score, aggdata.b$Kill_Score), Razing_Score = c(aggdata.r$Razing_Score, aggdata.a$Razing_Score, aggdata.b$Razing_Score))
+
+library(car)
 ```
+## Summary
+The purpose of this research is to explore the application of evolutionary computation to optimize a controller for a complex, stochastic game. Specifically, we use a Genetic Algorithm to optimize the build order and early attack strategy (timing push) of an AI that plays Starcraft: Brood War. First, we built a simple AI and its build order interpreter in C++ using BWAPI, an API allowing for the easy creation of bots that play Starcraft. The C++ controller code communicates with the actual Genetic Algorithm, written in R, to receive a build order and report the scores of each game it played for evaluation. The R script orchestrates the Genetic Algorithm, generating potential solutions, evaluating those solutions, then generating new solutions based on the success of the previous ones. While collecting data, we evaluated different factors from within the game to see how much of an effect they had in helping create the best solution, one where the AI would win its games against the default AI of Starcraft. We compare these factors against a complete random search as the control, and discuss which factors contributed, more or less, to achieving well-timed
+pushes and build orders.
 
-## Experimental design
-A section detailing the experimental setup. This is the place where you will define your test hypotheses, e.g.:
-$$\begin{cases} H_0: \mu = 10&\\H_1: \mu<10\end{cases}$$
+## Key Terms
+*Starcraft* - a real time strategy multiplayer video game in which two players construct and command an army in the effort to eliminated their opponent's forces. 
 
-including the reasons behind your choices of the value for $H_0$ and the directionality (or not) of $H_1$. 
+*Build Order* - an ordered list of units and actions to execute, one after the other, in a game of Starcraft. 
 
-This is also the place where you should discuss (whenever necessary) your definitions of minimally relevant effects ($\delta^*$), sample size calculations, choice of power and significance levels, and any other relevant information about specificities in your data collection procedures.
+*Races: Zerg, Terran, Protoss* - the three different types of armies that can be commanded in Starcraft each with different units, strategies, and playstyle. 
+
+## Experimental Design
+The goal of this experiment is to compare two alternative Genetic Algorithms used to optimize our Starcraft bot's build order. The Starcraft bot executes a build order given to it and when it reaches the end, it ceases to command its units, until the game ends. An acceptable build order consists of 5 different instructions, build SCV (resource acquiring unit), build Marine (attacking unit), build Supply Depot (structure increasing the maximum amount of possible units controlled by the player), build Barracks (structure allowing the training of Marines), and Push (a command to order all idle Marines to attack the enemy). Randomly generating build orders will be used as a control. If either genetic algorithm fails to do better than the random generated search, it will indicate the algorithms need to be further improved or otherwise changed. 
+\newpage
+The hypotheses are as follows:
+
+$$\begin{cases} H_0: \mu1-\mu2 = 0&\\H_1: \mu1-\mu2\ne0\end{cases}$$
+$$\begin{cases} H_0: \mu1-\mu3 = 0&\\H_1: \mu1-\mu3\ne0\end{cases}$$
+$$\begin{cases} H_0: \mu3-\mu2 = 0&\\H_1: \mu3-\mu2\ne0\end{cases}$$
+$\mu1$ - is the mean effectiveness of the randomly generated builds orders. 
+
+$\mu2$ - is the mean effectiveness of algorithm A's generated builds orders. 
+
+$\mu3$ - is the mean effectiveness of algorithm B's generated builds orders. 
+
+The null hypothesis assumes the means are equal while the alternative assumes they are not. If the null hypothesis cannot be rejected for comparing the means of the algorithms against the random search no further analysis will be useful because the algorithms did not significantly produce better build orders than a random search. 
+
+The difference between algorithm A and algorithm B is their crossover function. Algorithm A cuts the two parent build order lists in two and swaps the 2nd halves. Algorithm B's crossover function does the same thing as algorithm A 50% of the time, while the other 50% of the time, it places the 2nd halves in front of the 1st halves of the opposing parent. 
 
 ### Description of the data collection
-Whenever needed, you can also include an (optional) subsection describing the actual data collection, how it was performed, any adaptations or unexpected events that may have occurred, etc. Subsections like this can also be used for the sample size calculations or any other aspect that requires a longer discussion.
+For the random search, and both genetic algorithm searches, 900 build orders were generated. Each build order in turn was simulated in Starcraft 5 times. Since our Starcraft bot fights against the default AI which invokes many different strategies (rushing, standard play, greedy play) and the gameplay time is a factor in measuring the fitness, effectiveness, of each build order, simulating 5 games lets our Starcraft bot play against more than just one strategy from its opponent. Our Starcraft bot also plays the race, Terran. In order to make sure fighting against different races did not effect the data, the enemy was fixed as the race, Protoss. In summary, build orders were simulated 5 times each with the game match up always being Terran (our Starcraft bot) vs Protoss (default enemy AI) to minimize external factors effecting the outcome of each match. 
+
+While all 900 build orders were generated immediately for the random search, for Algorithms A & B following the genetic algorithm method, 50 build orders were generated and tested per generation. 18 generations were created totaling 900 build orders. 
+
+At the end of each game, scores were collected into a data frame in R: 
+``` {r, echo=F}
+  data.a[c(1, 27, 155, 348, 601),]
+```
+
+Each build order was assessed by the following fitness function: 
+``` {r, echo=F}
+  fitFun <- function(data) {
+  fitness <- mean((data$Unit_Score + data$Building_Score + data$Kill_Score + data$Razing_Score) 
+                  / data$Elapsed_Time)
+  return(fitness)
+  }
+fitFun
+```
+It took into account, units & buildings constructed and enemy units & buildings destroyed against the game time. All 4 scores and the game time were the average across the 5 games played for each build order.
+\newpage
 
 ## Exploratory Data Analysis
-The first step is to load and preprocess the data. For instance,
-```{r loaddata}
-data(mtcars)
-fc<-c(2,8:11)
-for (i in 1:length(fc)){mtcars[,fc[i]]<-as.factor(mtcars[,fc[i]])}
-levels(mtcars$am) <- c("Automatic","Manual")
+Box plot the Fitness, Win Rate, and a few Scores recorded from the experiment divided by algorithm.
+
+```{r, echo=F, fig.height=8, fig.width=6}
+par(mfrow = c(2, 1))
+boxplot(Fitness~Algorithm, data = combineData, ylab = "Fitness", xlab = "Algorithm", col = c("green", "blue", "red"))
+boxplot(Win~Algorithm, data = combineData, ylab = "WinRate", xlab = "Algorithm", col = c("green", "blue", "red"))
+boxplot(Kill_Score~Algorithm, data = combineData, ylab = "Kill_Score", xlab = "Algorithm", col = c("green", "blue", "red"))
+boxplot(Razing_Score~Algorithm, data = combineData, ylab = "Razing_Score", xlab = "Algorithm", col = c("green", "blue", "red"))
+
 ```
+The means of the Fitness, effectiveness, of the sample of build orders seem to differ. As well as the two scores plotted. The highest mean kill scores was produced by the build order samples from Algorithm A, although Algorithm B has more build orders producing higher razing scores (although the mean cannot be seen to differ from Algorithm A). 
+\newpage
+The win rate graph doesn't show much so we plotted it differently. Comparing it to fitness.
 
-To get an initial feel for the relationships between the relevant variables of your experiment it is frequently interesting to perform some preliminary (exploratory) analysis. This is frequently referred to as _getting a feel_ of your data, and can suggest procedures (such as outlier investigation or data transformations) to experienced experimenters.
-
-```{r pairs,fig.width=8,echo=TRUE,message=FALSE,fig.cap="Exploring the effect of car transmission on mpg values"}
-library(GGally,quietly = T, warn.conflicts = F) # This is just me getting fancy.
-                                                # There are much simpler ways ;-)
-ggpairs(data=mtcars,columns=c(1,9),title="MPG by transmission type",
-        upper=list(combo="box"),lower=list(combo="facethist"),
-        diag=list(continuous="density",discrete="bar"))
+```{r, echo=F, fig.height=8, fig.width=6}
+par(mfrow = c(3, 1))
+plot(x = aggdata.a$Fitness, y = aggdata.a$Win, ylab = "Win", xlab = "Fitness", main = "Algorithm A")
+plot(x = aggdata.b$Fitness, y = aggdata.b$Win, ylab = "Win", xlab = "Fitness", main = "Algorithm B")
+plot(x = aggdata.r$Fitness, y = aggdata.r$Win, ylab = "Win", xlab = "Fitness", main = "Random")
 ```
+\newpage
+```{r, echo=F}
+paste("Alg A wins:", sum(aggdata.a$Win) * 5)
+paste("Alg B wins:", sum(aggdata.b$Win) * 5)
+paste("Alg R wins:", sum(aggdata.r$Win) * 5)
+```
+Algorithm B created the most build orders that won games. The plots above showcase that there might be a correlation between fitness and win rate. 
 
+Its also interesting to look at the box plot of fitness scores per generation from algorithms A & B.
+largest common substring (substring search) done by dynamic programming
 
-Your preliminary analysis should be described together with the plots. In this example, two facts are immediately clear from the plots: first, **mpg** tends to correlate well with many of the other variables, most intensely with **drat** (positively) and **wt** (negatively). It is also clear that many of the variables are highly correlated (e.g., **wt** and **disp**). Second, it seems like manual transmission models present larger values of **mpg** than the automatic ones. In the next section a linear model will be fit to the data in order to investigate the significance and magnitude of this possible effect.
+```{r, echo=F, fig.height=6, fig.width=7}
+par(mfrow = c(2, 1))
+boxplot(Fitness~Gen, data = aggdata.a, ylab = "Fitness", xlab = "Generation", main = "Algorithm A")
+boxplot(Fitness~Gen, data = aggdata.b, ylab = "Fitness", xlab = "Generation", main = "Algorithm B")
+
+boxplot(Kill_Score~Gen, data = aggdata.a, ylab = "Kill Score", xlab = "Generation", main = "Algorithm A")
+boxplot(Kill_Score~Gen, data = aggdata.b, ylab = "Kill Score", xlab = "Generation", main = "Algorithm B")
+boxplot(Razing_Score~Gen, data = aggdata.a, ylab = "Razing Score", xlab = "Generation", main = "Algorithm A")
+boxplot(Razing_Score~Gen, data = aggdata.b, ylab = "Razing Score", xlab = "Generation", main = "Algorithm B")
+boxplot(Unit_Score~Gen, data = aggdata.a, ylab = "Unit Score", xlab = "Generation", main = "Algorithm A")
+boxplot(Unit_Score~Gen, data = aggdata.b, ylab = "Unit Score", xlab = "Generation", main = "Algorithm B")
+boxplot(Building_Score~Gen, data = aggdata.a, ylab = "Building Score", xlab = "Generation", main = "Algorithm A")
+boxplot(Building_Score~Gen, data = aggdata.b, ylab = "Building Score", xlab = "Generation", main = "Algorithm B")
+boxplot(Win~Gen, data = aggdata.a, ylab = "Win", xlab = "Generation", main = "Algorithm A")
+boxplot(Win~Gen, data = aggdata.b, ylab = "Win", xlab = "Generation", main = "Algorithm B")
+boxplot(Total_Minerals~Gen, data = aggdata.a, ylab = "Mineral", xlab = "Generation", main = "Algorithm A")
+boxplot(Total_Minerals~Gen, data = aggdata.b, ylab = "Mineral", xlab = "Generation", main = "Algorithm B")
+boxplot(Elapsed_Time~Gen, data = aggdata.a, ylab = "Time", xlab = "Generation", main = "Algorithm A")
+boxplot(Elapsed_Time~Gen, data = aggdata.b, ylab = "Time", xlab = "Generation", main = "Algorithm B")
+
+```
+Algorithm A seems to converge, if Algorithm A is used for future experiments its convergence should be looked at to determine whether it is detrimental to creating the highest winning build orders. Algorithm B does not converge, it seems, and its mean fitness tends to increase per generation which is important for our genetic algorithm to produce winning build orders. 
+\newpage
 
 ## Statistical Analysis
-Your statistical analysis should come here. This is the place where you should fit your statistical model, get the results of your significance test, your effect size estimates and confidence intervals.
+The means of Fitnesses from the random search, Algorithm A, and Algorithm B are compared using the Wilcoxon test. The correlation between Fitness and Win Rate is also tested for each. 
+```{r fitmodel,results='hold', echo=F}
+writeLines("Wilcoxon Rank Sum Tests:")
+writeLines("Random Search Fitness Score vs Alg. A Fitness Score")
+writeLines(paste("P-Value: ", wilcox.test(x = aggdata.r$Fitness, y = aggdata.a$Fitness)$p.value, "\n"))
 
-```{r fitmodel,results='hold'}
-model<-aov(mpg~am*disp,data=mtcars)
-summary(model)
+writeLines("Random Search Fitness Score vs Alg. B Fitness Score")
+writeLines(paste("P-Value: ", wilcox.test(x = aggdata.r$Fitness, y = aggdata.b$Fitness)$p.value, "\n"))
+
+writeLines("Alg. A Fitness Score vs Alg. B Fitness Score")
+writeLines(paste("P-Value: ", wilcox.test(x = aggdata.a$Fitness, y = aggdata.b$Fitness)$p.value, "\n"))
+
+writeLines("Random Search Win Rate vs Alg. A Win Rate")
+writeLines(paste("P-Value: ", wilcox.test(x = data.r$Win, y = data.a$Win)$p.value, "\n"))
+
+writeLines("Random Search Win Rate vs Alg. B Win Rate")
+writeLines(paste("P-Value: ", wilcox.test(x = data.r$Win, y = data.b$Win)$p.value, "\n"))
+
+writeLines("Alg. A Win Rate vs Alg. B Win Rate")
+writeLines(paste("P-Value: ", wilcox.test(x = data.a$Win, y = data.b$Win)$p.value, "\n"))
+
+writeLines("Correlation test between Fitness and Win Rate")
+writeLines(paste("[Random Search] P-Value: ", cor.test(x = aggdata.r$Fitness, aggdata.r$Win)$p.value, "\n"))
+writeLines(paste("[Algorithm A]   P-Value: ", cor.test(x = aggdata.a$Fitness, aggdata.a$Win)$p.value, "\n"))
+writeLines(paste("[Algorithm B]   P-Value: ", cor.test(x = aggdata.b$Fitness, aggdata.b$Win)$p.value, "\n"))
+
+
 ```
-
+\newpage
 ### Checking Model Assumptions
-The assumptions of your test should also be validated, and possible effects of violations should also be explored.
-```{r resplots,fig.width=8,echo=TRUE,message=FALSE, fig.cap = "Residual plots for the anova model"}
-par(mfrow=c(2,2), mai=.3*c(1,1,1,1))
-plot(model,pch=16,lty=1,lwd=2)
+Data should not be normally distributed, the tests used above are for non normally distributed data. 
+```{r, echo=F, fig.height=9, fig.width=6}
+par(mfrow = c(3, 1))
+qqPlot(aggdata.r$Fitness, ylab = "Fitness", main = "Random")
+qqPlot(aggdata.a$Fitness, ylab = "Fitness", main = "Algorithm A")
+qqPlot(aggdata.b$Fitness, ylab = "Fitness", main = "Algorithm B")
+
+disp <- shapiro.test(aggdata.r$Fitness)
+disp$data.name <- "Random Fitness Data"
+disp
+disp <- shapiro.test(aggdata.a$Fitness)
+disp$data.name <- "Algorithm A Fitness Data"
+disp
+disp <- shapiro.test(aggdata.b$Fitness)
+disp$data.name <- "Algorithm B Fitness Data"
+disp
+
 ```
+
+The fitness data compared is confirmed by test, and can be seen in the qq plots, to be not normally distributed. 
 
 ### Conclusions and Recommendations
-The discussion of your results, and the scientific/technical meaning of the effects detected, should be placed here. Always be sure to tie your results back to the original question of interest!
+Firstly, both genetic algorithms, through the Wilcoxon test, clearly produce better fitness valued build orders than the random search algorithm. This was to be expected as the genetic algorithms should attempt to approach higher and higher fitness values. Overall, Algorithm A produced the most high fitness valued build orders. Higher than algorithm B. This means algorithm A's crossover function works to create fitter build orders. Even so, algorithm A seems to have a convergence of each generations population. A correlation between the fitness value and win rate could not be proven with a correlation test for algorithm A, either. 
+
+Looking at algorithm B, it also produced significantly more and higher fitness valued build orders. What was most interesting was that it had the most winning build orders. Algorithm B's build orders and the random search generated build orders could be proven to correlate with their fitness value. Algorithm B also has a much wider spread of fitness values even in the later generations as seen in the graphs of each generation's population earlier. The cross over function for algorithm B doesn't cause convergence it seems.
+
+From this experiment it can be concluded that Algorithm A's search space seem to get too limited as it did not have a correlation between fitness and win rate unlike the random search and algorithm B, but algorithm B's mean fitness per generation does not increase very well. In the future we should look into the crossover function of algorithm B and see how to tweak it to get better fitness values. Since it could be seen that algorithm B had more build orders with higher Razing Scores it might be useful to give more priority to it in the fitness function as well as include win rate. The biggest take away from this experiment was two things. One was a reminder of the complexity of this problem, it was possible to affect the correlation of the fitness value vs win rate by tweaking the crossover function. That means other genetic algorithm parameters also need to be analyzed like, population size, parent selection method, etc. Two was that it seems the beginning of build orders are different than their ends, this being why algorithm B's crossover function still produced worse fitness valued build orders in later generations (all the way back to a value less than 1). 

@@ -35,15 +35,22 @@ ga_spCrossover_varied <- function(object, parents, ...)
   fitness <- object@fitness[parents]
   parents <- object@population[parents,,drop = FALSE]
   lens    <- lengths(parents[,1])
-  print(parents)
   children <- matrix(list(), nrow = 2, ncol = 1)
   fitnessChildren <- rep(NA, 2)
   pnt <- c(sample(1:lens[1], size = 1), sample(1:lens[2], size = 1))
-  print(pnt)
+  crossMethod <- sample(1:10, size = 1)
+  if (crossMethod > 7) {
   children[1,1] <- list(c(parents[[1]][1:pnt[1]],
                           parents[[2]][pnt[2]:lens[2]]))
   children[2,1] <- list(c(parents[[2]][1:pnt[2]],
                           parents[[1]][pnt[1]:lens[1]]))
+  }
+  else {
+    children[1,1] <- list(c(parents[[2]][pnt[2]:lens[2]], 
+                            parents[[1]][1:pnt[1]]))
+    children[2,1] <- list(c(parents[[1]][pnt[1]:lens[1]],
+                            parents[[2]][1:pnt[2]]))
+  }
   
   out <- list(children = children, fitness = fitnessChildren)
   return(out)
@@ -130,8 +137,8 @@ simGame <- function(ID, BO_Indv) {
 }
 
 ####### Config #######
-MAX_GEN <- 50
-POP_SIZE <- 50
+MAX_GEN <- 30
+POP_SIZE <- 30
 GAMES_PER_INDV <- 5
 
 MAX_INSTR <- 4
@@ -146,13 +153,15 @@ ga@popSize <- POP_SIZE
 
 # GA specific params
 SELECT <- ga_tourSelection
-TOUR_SIZE <- 5
+TOUR_SIZE <- 4
 
 CROSS <- ga_spCrossover_varied
+MAX_ATTEMPTS <- 10
 
 fitFun <- function(data) {
   fitness <- mean((data$Unit_Score + data$Building_Score + data$Kill_Score + data$Razing_Score) 
                   / data$Elapsed_Time)
+  fitness <- fitness * (0.5 + mean(data$Win))
   return(fitness)
 }
 
@@ -228,10 +237,21 @@ main <- function() {
     for(i in seq_len(nmating))
     { 
       parents <- mating[i,]
+      attempts <- 0
       repeat {
+        attempts <- attempts + 1
         crossover <- CROSS(ga, parents)
         childLens <- lengths(crossover$children[,1])
         if (sum(childLens > MIN_ORDERS & childLens < MAX_ORDERS) == 2) {
+          break;
+        } 
+        else if (sum(childLens > MIN_ORDERS) == 2 & attempts > MAX_ATTEMPTS) {
+          if (childLens[1] > MAX_ORDERS) {
+            length(crossover$children[[1,1]]) <- MAX_ORDERS
+          } 
+          if (childLens[2] > MAX_ORDERS) {
+            length(crossover$children[[2,1]]) <- MAX_ORDERS
+          }
           break;
         }
       }
@@ -246,17 +266,42 @@ main <- function() {
 }
 
 writeData <- function(name, gen = 1) {
-  write.csv(run_data, file = paste("data/", name, ".csv", sep = ''))
+  write.csv(run_data, file = paste("data/", name, "/", name, ".csv", sep = ''))
   for (x in 1:gen) {
-    write.csv(t(pad(builds[x,])), file = paste("data/", name, "_builds_gen_", x, ".csv", sep = ''))
-    write.csv(t(meaningfulBO(pad(builds[x,]))), file = paste("data/", name, "_mbuilds_gen_", x, ".csv", sep = ''))
+    write.csv(t(meaningfulBO(pad(builds[x,]))), file = paste("data/", name, "/", name, "_mbuilds_gen_", x, ".csv", sep = ''))
   }
+  save(builds, run_data, file = paste("data/", name, "/", name, ".Rdata", sep = ''))
 }
 
 test <- function(iter = 5) {
   i <- 1
   while(i < iter) {
-    simGame(BO_Indv = toBOString(builds[[58]]), ID = "!TEST!")
+    simGame(BO_Indv = toBOString(builds.b[[132]]), ID = "!TEST!")
     i <- i + 1
     }
+}
+
+continue <- function() {
+  while(gen <= MAX_GEN) {
+    indv <<- 41
+    #builds[gen,] <<- ga@population
+    while(indv <= POP_SIZE) {
+      game <<- 5
+      while(game <= GAMES_PER_INDV){
+        
+        run_data[run_data.row, +indvInfo] <<- c(gen, indv, game, NA)
+        
+        run_data[run_data.row, -indvInfo] <<- simGame(ID=createID(gen, indv, game),
+                                                      BO_Indv=toBOString(ga@population[[indv]]))
+        
+        run_data.row <<- run_data.row + 1
+        game <<- game + 1
+      }
+      run_data[run_data$Gen==gen & run_data$Indv==indv,]$Fitness <<-
+        fitFun(run_data[run_data$Gen==gen & run_data$Indv==indv,])
+      
+      indv <<- 51
+    }
+    gen <<- gen + 1
+  }
 }

@@ -8,6 +8,11 @@ include/
 include/*
 TournamentModule/
 TournamentModule/*
+AI.lnk
+.*
+R_Code/Report.pdf
+R_Code/report_template.*
+Graphs.R*
 # Created by https://www.gitignore.io/api/c++,visualstudio
 
 ### C++ ###

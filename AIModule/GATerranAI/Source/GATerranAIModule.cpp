@@ -15,8 +15,8 @@ GASocket *gaSocket = NULL;
 
 void GATerranAIModule::onStart()
 {
-	Broodwar->setLocalSpeed(0);
-	Broodwar->setGUI(false);
+	Broodwar->setLocalSpeed(5);
+	//Broodwar->setGUI(false);
 
 	if (GASOCKET) {// use GA Socket
 		gaSocket = new GASocket();
